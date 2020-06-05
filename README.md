@@ -20,3 +20,8 @@ Build:
 ```bash
 npm run build:zip
 ```
+
+## Challenge
+
+- Get theme color
+- Get app icon
