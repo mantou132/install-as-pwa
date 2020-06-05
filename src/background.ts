@@ -72,11 +72,16 @@ if (typeof chrome !== 'undefined' && chrome.debugger) {
   browser.webRequest.onBeforeRequest.addListener(
     details => {
       const filter = browser.webRequest.filterResponseData(details.requestId);
-
+      const decoder = new TextDecoder('utf-8');
+      let html = '';
       // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
       // @ts-ignore
       filter.ondata = event => {
-        const html = new TextDecoder('utf-8').decode(event.data, { stream: true });
+        html += decoder.decode(event.data, { stream: true });
+      };
+      // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
+      // @ts-ignore
+      filter.onstop = () => {
         filter.write(new TextEncoder().encode(injectWebManifestAndServiceWorker(html)));
         filter.disconnect();
       };
@@ -93,7 +98,7 @@ if (typeof chrome !== 'undefined' && chrome.debugger) {
 
         // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
         // @ts-ignore
-        filter.ondata = async () => {
+        filter.onstop = async () => {
           filter.write(new TextEncoder().encode(await generateManifest(details.url)));
           filter.disconnect();
         };
@@ -111,7 +116,7 @@ if (typeof chrome !== 'undefined' && chrome.debugger) {
 
         // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
         // @ts-ignore
-        filter.ondata = async () => {
+        filter.onstop = async () => {
           const res = await fetch(SERVICE_WORKER_SOURCE);
           const text = await res.text();
           filter.write(new TextEncoder().encode(text));
