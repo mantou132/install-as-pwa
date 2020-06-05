@@ -1,23 +1,22 @@
-## Webextension Boilerplate
+# Install as PWA
 
-build:
+Convert any website into installable PWA.
 
-- webpack
-- ts-loader
-- typescript
-- eslint
-- prettier
+## How to work
+
+- intercept document and inject WebManifest, ServiceWorker
+- intercept WebManifest, ServiceWorker, and response
 
 ## development
 
 ```bash
-# step 1
-npm run watch
-# open a new terminal
-# step 2
+# install dependencies
+npm install
+# start develop
 npm run start
 ```
 
-## publish
-
-Publishing Firefox extension requires apikey, save to apikey.js
+Build:
+```bash
+npm run build:zip
+```

@@ -10,7 +10,7 @@
     "resolveJsonModule": true,
     "allowSyntheticDefaultImports": true,
     "target": "es6",
-    "lib": ["es2018", "dom"]
+    "lib": ["es2018", "dom", "DOM.Iterable"]
   },
   "include": ["src"]
 }

@@ -16,6 +16,7 @@
   "author": "mantou132",
   "license": "ISC",
   "dependencies": {
+    "@types/chrome": "0.0.114",
     "webextension-polyfill-ts": "^0.13.0"
   },
   "devDependencies": {

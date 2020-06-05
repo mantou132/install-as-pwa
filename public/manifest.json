@@ -1,8 +1,15 @@
 {
-  "name": "webextension-boilerplate",
+  "name": "Install-As-PWA",
   "version": "0.0.1",
   "manifest_version": 2,
-  "description": "webextension boilerplate",
+  "description": "Convert any website into installable PWA",
+  "permissions": [
+    "debugger",
+    "https://*/*"
+  ],
+  "browser_action": {
+    "default_title": "Convert to PWA"
+  },
   "background": {
     "scripts": ["background.js"]
   }
