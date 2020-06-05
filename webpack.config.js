@@ -30,7 +30,7 @@ module.exports = {
   },
   plugins: [
     new CleanWebpackPlugin({ cleanStaleWebpackAssets: false }),
-    new CopyWebpackPlugin([{ from: './public', to: './' }]),
+    new CopyWebpackPlugin({ patterns: [{ from: './public', to: './' }] }),
   ],
   devtool: 'source-map',
 };
