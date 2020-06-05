@@ -50,7 +50,7 @@ if (typeof chrome !== 'undefined' && chrome.debugger) {
           requestId,
           responseCode: 200,
           binaryResponseHeaders: btoa(unescape(encodeURIComponent('content-type: application/json'))),
-          body: btoa(unescape(encodeURIComponent(await generateManifest(source.tabId as number, request.url)))),
+          body: btoa(unescape(encodeURIComponent(await generateManifest(request.url)))),
         });
       } else if (request.url.endsWith(SERVICE_WORKER_NAME)) {
         // 😢 not capture
@@ -94,7 +94,7 @@ if (typeof chrome !== 'undefined' && chrome.debugger) {
         // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
         // @ts-ignore
         filter.ondata = async () => {
-          filter.write(new TextEncoder().encode(await generateManifest(details.tabId, details.url)));
+          filter.write(new TextEncoder().encode(await generateManifest(details.url)));
           filter.disconnect();
         };
 

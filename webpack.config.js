@@ -6,6 +6,7 @@ const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 module.exports = {
   entry: {
     background: './src/background.ts',
+    content: './src/content.ts',
   },
   module: {
     rules: [
