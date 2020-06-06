@@ -2,22 +2,39 @@ import { browser } from 'webextension-polyfill-ts';
 
 import { generateManifest } from './webmanifest';
 
-const MANIFEST_NAME = '/?~webmanifest.json';
-const SERVICE_WORKER_NAME = '/?~serviceworker.js';
+const MANIFEST_PATH = '/?~webmanifest.json';
+const SERVICE_WORKER_PATH = '/?~serviceworker.js';
 const SERVICE_WORKER_SOURCE =
   'https://gist.githubusercontent.com/mantou132/52c2795604f7b1779cd66b2241650093/raw/c1be067ca7ad8e942b982a1e42d3f1ee92f4dd91/serviceworker.js';
 
-const injectWebManifestAndServiceWorker = (html: string) => {
-  return html.replace(
-    '</head>',
-    `
-      <link rel="manifest" href="${MANIFEST_NAME}">
-      <script>
-        navigator.serviceWorker.register('${SERVICE_WORKER_NAME}');
-      </script>
-    </head>
-    `,
-  );
+const injectWebManifestAndServiceWorker = (html?: string) => {
+  if (html) {
+    return html.replace(
+      '</head>',
+      `
+        <link rel="manifest" href="${MANIFEST_PATH}">
+        <script>
+          navigator.serviceWorker.register('${SERVICE_WORKER_PATH}');
+        </script>
+      </head>
+      `,
+    );
+  } else {
+    browser.tabs.executeScript({
+      code: `
+        document.querySelector('link[rel=manifest]')?.remove();
+        var webmanifestLinkEle = document.createElement('link');
+        webmanifestLinkEle.rel = 'manifest';
+        webmanifestLinkEle.href = '${MANIFEST_PATH}';
+        document.head.append(webmanifestLinkEle);
+        navigator.serviceWorker.getRegistration().then(registration => {
+          (registration ? registration.unregister() : Promise.resolve()).then(() => {
+            navigator.serviceWorker.register('${SERVICE_WORKER_PATH}');
+          });
+        });
+      `,
+    });
+  }
 };
 
 if (typeof chrome !== 'undefined' && chrome.debugger) {
@@ -26,33 +43,22 @@ if (typeof chrome !== 'undefined' && chrome.debugger) {
     // 😢 degugging tip show in all tabs
     const debuggee = { tabId: tab.id };
     chrome.debugger.attach(debuggee, CDP_VERSION, () => {
-      chrome.debugger.sendCommand(debuggee, 'Fetch.enable', { patterns: [{ urlPattern: '*' }] }, () => {
-        browser.tabs.reload();
-      });
+      chrome.debugger.sendCommand(debuggee, 'Fetch.enable', { patterns: [{ urlPattern: '*' }] });
     });
+    injectWebManifestAndServiceWorker();
   });
 
   chrome.debugger.onEvent.addListener(async (source, method, params: any) => {
     if (method === 'Fetch.requestPaused') {
-      const { requestId, request, resourceType } = params;
-      if (resourceType === 'Document') {
-        const res = await fetch(request.url);
-        const headers = [...res.headers].map(e => e.join(': ')).join('\u0000\u0000');
-        const html = await res.text();
-        chrome.debugger.sendCommand(source, 'Fetch.fulfillRequest', {
-          requestId,
-          responseCode: 200,
-          binaryResponseHeaders: btoa(unescape(encodeURIComponent(headers))),
-          body: btoa(unescape(encodeURIComponent(injectWebManifestAndServiceWorker(html)))),
-        });
-      } else if (request.url.endsWith(MANIFEST_NAME)) {
+      const { requestId, request } = params;
+      if (request.url.endsWith(MANIFEST_PATH)) {
         chrome.debugger.sendCommand(source, 'Fetch.fulfillRequest', {
           requestId,
           responseCode: 200,
           binaryResponseHeaders: btoa(unescape(encodeURIComponent('content-type: application/json'))),
           body: btoa(unescape(encodeURIComponent(await generateManifest(request.url)))),
         });
-      } else if (request.url.endsWith(SERVICE_WORKER_NAME)) {
+      } else if (request.url.endsWith(SERVICE_WORKER_PATH)) {
         // 😢 not capture
         console.log(request.url);
         const res = await fetch(SERVICE_WORKER_SOURCE);
@@ -69,6 +75,9 @@ if (typeof chrome !== 'undefined' && chrome.debugger) {
     }
   });
 } else {
+  browser.browserAction.onClicked.addListener(() => {
+    injectWebManifestAndServiceWorker();
+  });
   browser.webRequest.onBeforeRequest.addListener(
     details => {
       const filter = browser.webRequest.filterResponseData(details.requestId);
@@ -93,7 +102,7 @@ if (typeof chrome !== 'undefined' && chrome.debugger) {
   );
   browser.webRequest.onBeforeRequest.addListener(
     details => {
-      if (details.url.endsWith(MANIFEST_NAME)) {
+      if (details.url.endsWith(MANIFEST_PATH)) {
         const filter = browser.webRequest.filterResponseData(details.requestId);
 
         // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
@@ -111,7 +120,7 @@ if (typeof chrome !== 'undefined' && chrome.debugger) {
   );
   browser.webRequest.onBeforeRequest.addListener(
     details => {
-      if (details.url.endsWith(SERVICE_WORKER_NAME)) {
+      if (details.url.endsWith(SERVICE_WORKER_PATH)) {
         const filter = browser.webRequest.filterResponseData(details.requestId);
 
         // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
@@ -132,7 +141,7 @@ if (typeof chrome !== 'undefined' && chrome.debugger) {
   browser.webRequest.onHeadersReceived.addListener(
     details => {
       if (!details.responseHeaders) return;
-      if (details.url.endsWith(SERVICE_WORKER_NAME)) {
+      if (details.url.endsWith(SERVICE_WORKER_PATH)) {
         details.responseHeaders.length = 0;
         details.responseHeaders.push({
           name: 'content-type',
@@ -140,7 +149,7 @@ if (typeof chrome !== 'undefined' && chrome.debugger) {
         });
         return { responseHeaders: details.responseHeaders };
       }
-      if (details.url.endsWith(MANIFEST_NAME)) {
+      if (details.url.endsWith(MANIFEST_PATH)) {
         details.responseHeaders.length = 0;
         details.responseHeaders.push({
           name: 'content-type',
